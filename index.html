@@ -493,7 +493,16 @@ function renderSavings(){
     return `<div class="sav-card"><div class="sav-head"><div class="sav-left"><div class="sav-icon" style="background:${s.color}22">${s.icon}</div><div><div class="sav-name">${s.name}</div>${s.note?`<div class="sav-note">${s.note}</div>`:""}</div></div><button class="del-btn" onclick="delSavings(${s.id})">✕</button></div>
     <div class="sav-amounts"><span style="color:${s.color};font-weight:500">${fmt(s.saved)} ditabung</span><span>Target: ${fmt(s.target)}</span></div>
     <div class="sav-bar"><div class="sav-fill" style="width:${p}%;background:${s.color}"></div></div>
-    <div class="sav-footer"><span class="sav-pct">${p}% tercapai</span>${isEd?`<div class="add-funds-row"><input type="number" id="fa_${s.id}" placeholder="Jumlah"/><button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="confirmFund(${s.id})">✓</button><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="editingSavId=null;renderSavings()">✕</button></div>`:`<button class="link-btn" onclick="editingSavId=${s.id};renderSavings()">+ Tambah dana</button>`}</div></div>`;
+    <div class="sav-footer"><span class="sav-pct">${p}% tercapai</span>${isEd?`<div class="add-funds-row">
+        <select id="fm_${s.id}" style="font-size:12px;border:1px solid #e5e7eb;border-radius:8px;padding:4px 6px;outline:none">
+          <option value="set">✏️ Set</option>
+          <option value="add">➕ Tambah</option>
+          <option value="sub">➖ Kurang</option>
+        </select>
+        <input type="number" id="fa_${s.id}" placeholder="Jumlah"/>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="confirmFund(${s.id})">✓</button>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="editingSavId=null;renderSavings()">✕</button>
+      </div>`:`<button class="link-btn" onclick="editingSavId=${s.id};renderSavings()">✏️ Edit saldo</button>`}</div></div>`;
   }).join("");
 }
 
@@ -567,8 +576,17 @@ function addSavings(){
 }
 function delSavings(id){savings=savings.filter(s=>s.id!==id);renderSavings();renderCards();scheduleSave();}
 function confirmFund(id){
-  const amt=+document.getElementById("fa_"+id).value;if(isNaN(amt))return;
-  savings=savings.map(s=>s.id===id?{...s,saved:Math.max(0,s.saved+amt)}:s);
+  const amt=+document.getElementById("fa_"+id).value;
+  const mode=document.getElementById("fm_"+id).value;
+  if(isNaN(amt)||amt<0)return;
+  savings=savings.map(s=>{
+    if(s.id!==id)return s;
+    let newSaved=s.saved;
+    if(mode==="set") newSaved=amt;
+    else if(mode==="add") newSaved=s.saved+amt;
+    else if(mode==="sub") newSaved=Math.max(0,s.saved-amt);
+    return {...s,saved:newSaved};
+  });
   editingSavId=null;renderSavings();renderCards();scheduleSave();
 }
 
