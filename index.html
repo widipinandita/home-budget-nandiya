@@ -5,39 +5,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Home Budget</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAJY_weziaOWNyTGhG9eihw5iL6qctndB0",
+  authDomain: "home-budget-nandiya.firebaseapp.com",
+  databaseURL: "https://home-budget-nandiya-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "home-budget-nandiya",
+  storageBucket: "home-budget-nandiya.firebasestorage.app",
+  messagingSenderId: "403019763204",
+  appId: "1:403019763204:web:15e6f1935a83cf4529ef51",
+  measurementId: "G-4FH5F5PD4Q"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const DATA_REF = ref(db, "budget/data");
+
+window._fbSave = async (data) => {
+  try { await set(DATA_REF, data); } catch(e) { console.warn("Save failed:", e); }
+};
+window._fbLoad = async () => {
+  try {
+    const snap = await get(DATA_REF);
+    return snap.exists() ? snap.val() : null;
+  } catch(e) { console.warn("Load failed:", e); return null; }
+};
+window._fbReady = true;
+window.dispatchEvent(new Event("fb-ready"));
+</script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;color:#111827;min-height:100vh}
-  /* Header */
   .header{background:#fff;border-bottom:1px solid #f3f4f6;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
   .header h1{font-size:16px;font-weight:600}
   .header p{font-size:11px;color:#9ca3af;margin-top:1px}
-  .header-right{display:flex;gap:8px}
+  .header-right{display:flex;gap:8px;align-items:center}
   select{font-size:13px;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;background:#fff;color:#374151;cursor:pointer;outline:none}
-  /* Cards */
+  .save-status{font-size:11px;color:#9ca3af;white-space:nowrap}
+  .save-status.saving{color:#f59e0b}
+  .save-status.saved{color:#22c55e}
+  .save-status.error{color:#ef4444}
   .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 20px}
   .card{background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px}
   .card-label{font-size:11px;color:#9ca3af;margin-bottom:4px}
   .card-value{font-size:20px;font-weight:600}
   .card-sub{font-size:11px;color:#9ca3af;margin-top:2px}
-  /* Tabs */
   .tabs{display:flex;gap:8px;padding:0 20px 14px;overflow-x:auto}
   .tab{padding:6px 16px;border-radius:999px;font-size:13px;border:1px solid #e5e7eb;background:#fff;color:#6b7280;cursor:pointer;white-space:nowrap;transition:.15s}
   .tab.active{background:#4f46e5;color:#fff;border-color:#4f46e5}
-  /* Panel */
   .panel{display:none;padding:0 20px 60px}
   .panel.active{display:block}
-  /* Card box */
   .box{background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:16px;margin-bottom:14px}
   .box-title{font-size:13px;font-weight:500;color:#374151;margin-bottom:12px}
-  /* Progress */
   .prog-row{margin-bottom:10px}
   .prog-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
   .prog-name{font-size:13px;color:#374151;display:flex;align-items:center;gap:6px}
   .prog-amt{font-size:11px;color:#9ca3af}
   .prog-bar{height:6px;background:#f3f4f6;border-radius:999px;overflow:hidden}
   .prog-fill{height:100%;border-radius:999px;transition:.3s}
-  /* Form row */
   .form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
   .form-row input,.form-row select{font-size:13px;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;outline:none;background:#fff}
   .form-row input{flex:1;min-width:80px}
@@ -45,8 +74,6 @@
   .btn-primary{background:#4f46e5;color:#fff}
   .btn-primary:hover{background:#4338ca}
   .btn-ghost{background:#fff;border:1px solid #e5e7eb;color:#6b7280}
-  .btn-ghost:hover{background:#f9fafb}
-  /* Expense list */
   .exp-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f9fafb}
   .exp-item:last-child{border-bottom:none}
   .exp-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
@@ -56,12 +83,10 @@
   .exp-amt{font-size:13px;font-weight:500;color:#374151;margin-right:8px}
   .del-btn{background:none;border:none;color:#d1d5db;cursor:pointer;font-size:15px;padding:2px 4px}
   .del-btn:hover{color:#ef4444}
-  /* Budget rows */
   .bud-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
   .bud-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
   .bud-name{font-size:13px;color:#374151;flex:1}
   .bud-row input{width:110px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;text-align:right;outline:none}
-  /* Add cat */
   .add-cat-form{border:2px dashed #e5e7eb;border-radius:12px;padding:16px;margin-top:8px}
   .add-cat-form.hidden{display:none}
   .dashed-btn{width:100%;border:2px dashed #e5e7eb;border-radius:12px;padding:12px;background:none;font-size:13px;color:#9ca3af;cursor:pointer;transition:.15s}
@@ -72,7 +97,6 @@
   .color-grid{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
   .color-opt{width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;transition:.15s}
   .color-opt.selected{outline:2px solid #6b7280;outline-offset:2px;transform:scale(1.15)}
-  /* Savings */
   .sav-card{background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;margin-bottom:12px}
   .sav-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
   .sav-left{display:flex;align-items:center;gap:10px}
@@ -88,30 +112,34 @@
   .add-funds-row input{width:100px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;padding:4px 8px;text-align:right;outline:none}
   .link-btn{background:none;border:none;font-size:12px;color:#6366f1;cursor:pointer}
   .link-btn:hover{text-decoration:underline}
-  /* Total savings bar */
   .total-prog{background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;margin-bottom:14px}
   .total-bar{height:10px;background:#f3f4f6;border-radius:999px;overflow:hidden;margin:8px 0 4px}
   .total-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#a855f7);transition:.3s}
   canvas{max-width:100%}
-  .red{color:#ef4444!important}
-  .green{color:#16a34a!important}
-  .indigo{color:#4f46e5!important}
-  .purple{color:#9333ea!important}
+  .red{color:#ef4444!important}.green{color:#16a34a!important}.indigo{color:#4f46e5!important}.purple{color:#9333ea!important}
   .empty{font-size:13px;color:#9ca3af;text-align:center;padding:24px 0}
+  #loadingOverlay{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px}
+  #loadingOverlay p{font-size:14px;color:#9ca3af}
+  .spinner{width:32px;height:32px;border:3px solid #e0e7ff;border-top-color:#6366f1;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>Memuat data...</p>
+</div>
+
 <div class="header">
   <div><h1>Home Budget</h1><p id="yr"></p></div>
   <div class="header-right">
+    <span class="save-status" id="saveStatus">●</span>
     <select id="curSel"></select>
     <select id="monSel"></select>
   </div>
 </div>
 
-<!-- SUMMARY CARDS -->
 <div class="cards">
   <div class="card"><div class="card-label">Pengeluaran</div><div class="card-value" id="cSpent">-</div><div class="card-sub" id="cSpentSub">-</div></div>
   <div class="card"><div class="card-label">Sisa</div><div class="card-value" id="cRem">-</div><div class="card-sub">bulan ini</div></div>
@@ -119,7 +147,6 @@
   <div class="card"><div class="card-label">Efisiensi</div><div class="card-value purple" id="cRate">-%</div><div class="card-sub">dari anggaran</div></div>
 </div>
 
-<!-- TABS -->
 <div class="tabs">
   <button class="tab active" onclick="switchTab('overview')">Overview</button>
   <button class="tab" onclick="switchTab('expenses')">Pengeluaran</button>
@@ -127,14 +154,12 @@
   <button class="tab" onclick="switchTab('savings')">Tabungan</button>
 </div>
 
-<!-- OVERVIEW -->
 <div class="panel active" id="tab-overview">
   <div class="box"><div class="box-title">Progress Anggaran</div><div id="progBars"></div></div>
   <div class="box"><div class="box-title">Rincian Pengeluaran</div><canvas id="pieChart" height="220"></canvas></div>
   <div class="box"><div class="box-title">Anggaran vs Pengeluaran</div><canvas id="barChart" height="220"></canvas></div>
 </div>
 
-<!-- EXPENSES -->
 <div class="panel" id="tab-expenses">
   <div class="box">
     <div class="form-row">
@@ -147,11 +172,9 @@
   </div>
 </div>
 
-<!-- BUDGETS -->
 <div class="panel" id="tab-budgets">
   <div class="box" id="budgetList"></div>
-  <!-- Add category form -->
-  <button class="dashed-btn" id="addCatBtn" onclick="toggleCatForm()">+ Tambah Kategori</button>
+  <button class="dashed-btn" onclick="toggleCatForm()">+ Tambah Kategori</button>
   <div class="add-cat-form hidden" id="catForm">
     <div class="box-title" style="margin-bottom:10px">Kategori Baru</div>
     <input id="catName" placeholder="Nama kategori" style="width:100%;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;outline:none;margin-bottom:8px" />
@@ -164,10 +187,9 @@
   </div>
 </div>
 
-<!-- SAVINGS -->
 <div class="panel" id="tab-savings">
   <div class="total-prog">
-    <div style="display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;justify-content:space-between">
       <span style="font-size:13px;font-weight:500;color:#374151">Total Progress Tabungan</span>
       <span style="font-size:11px;color:#6b7280" id="totalSavLabel">-</span>
     </div>
@@ -175,7 +197,7 @@
     <div style="font-size:11px;color:#9ca3af" id="totalSavPct">0% dari semua target</div>
   </div>
   <div id="savList"></div>
-  <button class="dashed-btn" id="addSavBtn" onclick="toggleSavForm()">+ Tambah Target Tabungan</button>
+  <button class="dashed-btn" onclick="toggleSavForm()">+ Tambah Target Tabungan</button>
   <div class="add-cat-form hidden" id="savForm" style="margin-top:8px">
     <div class="box-title" style="margin-bottom:10px">Target Tabungan Baru</div>
     <input id="savName" placeholder="Nama target" style="width:100%;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;outline:none;margin-bottom:6px" />
@@ -194,35 +216,22 @@
 </div>
 
 <script>
-// ── DATA ──────────────────────────────────────────────────────────────────────
-const CURRENCIES = [
-  {code:"IDR",symbol:"Rp",locale:"id-ID"},
-  {code:"USD",symbol:"$",locale:"en-US"},
-  {code:"EUR",symbol:"€",locale:"de-DE"},
-  {code:"GBP",symbol:"£",locale:"en-GB"},
-  {code:"SGD",symbol:"S$",locale:"en-SG"},
-  {code:"MYR",symbol:"RM",locale:"ms-MY"},
-  {code:"AUD",symbol:"A$",locale:"en-AU"},
-  {code:"JPY",symbol:"¥",locale:"ja-JP"},
-];
-const MONTHS = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"];
-const ICONS = ["🏠","🛒","⚡","🚗","❤️","🎬","🍔","📱","👕","🏥","✈️","🎓","💼","⭐","🐷","🛡️","🏦","👶","🪙"];
-const COLORS = ["#6366f1","#22c55e","#f59e0b","#3b82f6","#ec4899","#8b5cf6","#ef4444","#14b8a6","#f97316","#64748b","#a855f7","#06b6d4"];
+const CURRENCIES=[{code:"IDR",symbol:"Rp",locale:"id-ID"},{code:"USD",symbol:"$",locale:"en-US"},{code:"EUR",symbol:"€",locale:"de-DE"},{code:"GBP",symbol:"£",locale:"en-GB"},{code:"SGD",symbol:"S$",locale:"en-SG"},{code:"MYR",symbol:"RM",locale:"ms-MY"},{code:"AUD",symbol:"A$",locale:"en-AU"},{code:"JPY",symbol:"¥",locale:"ja-JP"}];
+const MONTHS=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"];
+const ICONS=["🏠","🛒","⚡","🚗","❤️","🎬","🍔","📱","👕","🏥","✈️","🎓","💼","⭐","🐷","🛡️","🏦","👶","🪙","🎯"];
+const COLORS=["#6366f1","#22c55e","#f59e0b","#3b82f6","#ec4899","#8b5cf6","#ef4444","#14b8a6","#f97316","#64748b","#a855f7","#06b6d4"];
 
-const NOW = new Date();
-let curMonth = NOW.getMonth();
-let currency = CURRENCIES[0];
+const NOW=new Date();
+let curMonth=NOW.getMonth();
+let currency=CURRENCIES[0];
 
-let categories = [
-  {name:"Hunian",icon:"🏠",color:"#6366f1"},
-  {name:"Belanja",icon:"🛒",color:"#22c55e"},
-  {name:"Utilitas",icon:"⚡",color:"#f59e0b"},
-  {name:"Transportasi",icon:"🚗",color:"#3b82f6"},
-  {name:"Kesehatan",icon:"❤️",color:"#ec4899"},
-  {name:"Hiburan",icon:"🎬",color:"#8b5cf6"},
+const DEFAULT_CATEGORIES=[
+  {name:"Hunian",icon:"🏠",color:"#6366f1"},{name:"Belanja",icon:"🛒",color:"#22c55e"},
+  {name:"Utilitas",icon:"⚡",color:"#f59e0b"},{name:"Transportasi",icon:"🚗",color:"#3b82f6"},
+  {name:"Kesehatan",icon:"❤️",color:"#ec4899"},{name:"Hiburan",icon:"🎬",color:"#8b5cf6"},
 ];
-let budgets = {Hunian:8000000,Belanja:2000000,Utilitas:750000,Transportasi:1000000,Kesehatan:500000,Hiburan:500000};
-let expenses = [
+const DEFAULT_BUDGETS={Hunian:8000000,Belanja:2000000,Utilitas:750000,Transportasi:1000000,Kesehatan:500000,Hiburan:500000};
+const DEFAULT_EXPENSES=[
   {id:1,cat:"Hunian",label:"Sewa",amount:7500000,month:curMonth},
   {id:2,cat:"Belanja",label:"Belanja mingguan",amount:450000,month:curMonth},
   {id:3,cat:"Belanja",label:"Pasar",amount:200000,month:curMonth},
@@ -232,7 +241,7 @@ let expenses = [
   {id:7,cat:"Kesehatan",label:"Gym",amount:200000,month:curMonth},
   {id:8,cat:"Hiburan",label:"Streaming",amount:150000,month:curMonth},
 ];
-let savings = [
+const DEFAULT_SAVINGS=[
   {id:1,name:"Dana Darurat",icon:"🛡️",color:"#ef4444",target:60000000,saved:18000000,note:"3–6 bulan pengeluaran"},
   {id:2,name:"Tabungan Rumah",icon:"🏦",color:"#6366f1",target:300000000,saved:45000000,note:"Uang muka KPR"},
   {id:3,name:"Tabungan Anak",icon:"👶",color:"#ec4899",target:100000000,saved:22000000,note:"Pendidikan & masa depan"},
@@ -241,92 +250,104 @@ let savings = [
   {id:6,name:"Pendidikan",icon:"🎓",color:"#8b5cf6",target:50000000,saved:12000000,note:"Kursus & pengembangan diri"},
   {id:7,name:"Pensiun",icon:"💼",color:"#22c55e",target:500000000,saved:80000000,note:"Keamanan jangka panjang"},
 ];
-let nextId = 100;
-let newCatIcon = ICONS[0], newCatColor = COLORS[0];
-let newSavIcon = ICONS[14], newSavColor = COLORS[0];
-let editingSavId = null;
-let pieChartInst = null, barChartInst = null;
+
+let categories=[...DEFAULT_CATEGORIES];
+let budgets={...DEFAULT_BUDGETS};
+let expenses=[...DEFAULT_EXPENSES];
+let savings=[...DEFAULT_SAVINGS];
+let nextId=100;
+let newCatIcon=ICONS[0],newCatColor=COLORS[0];
+let newSavIcon=ICONS[14],newSavColor=COLORS[0];
+let editingSavId=null;
+let pieChartInst=null,barChartInst=null;
+let saveTimer=null;
 
 // ── FORMAT ────────────────────────────────────────────────────────────────────
-function fmt(v) {
-  const noDecimal = ["IDR","JPY"];
-  v = Math.round(v);
-  if(noDecimal.includes(currency.code)) return currency.symbol + v.toLocaleString(currency.locale);
-  return currency.symbol + Number(v).toLocaleString(currency.locale,{minimumFractionDigits:0,maximumFractionDigits:2});
+function fmt(v){
+  v=Math.round(v);
+  if(["IDR","JPY"].includes(currency.code)) return currency.symbol+v.toLocaleString(currency.locale);
+  return currency.symbol+Number(v).toLocaleString(currency.locale,{minimumFractionDigits:0,maximumFractionDigits:2});
 }
-function shortFmt(v) {
-  if(currency.code==="IDR") {
-    if(v>=1000000) return currency.symbol+(v/1000000).toFixed(1)+"jt";
-    if(v>=1000) return currency.symbol+(v/1000).toFixed(0)+"rb";
-  }
-  if(v>=1000000) return currency.symbol+(v/1000000).toFixed(1)+"M";
-  if(v>=1000) return currency.symbol+(v/1000).toFixed(0)+"k";
+function shortFmt(v){
+  if(currency.code==="IDR"){if(v>=1000000)return currency.symbol+(v/1000000).toFixed(1)+"jt";if(v>=1000)return currency.symbol+(v/1000).toFixed(0)+"rb";}
+  if(v>=1000000)return currency.symbol+(v/1000000).toFixed(1)+"M";
+  if(v>=1000)return currency.symbol+(v/1000).toFixed(0)+"k";
   return fmt(v);
 }
 
-// ── COMPUTED ──────────────────────────────────────────────────────────────────
-function monthExp() { return expenses.filter(e=>e.month===curMonth); }
-function spentByCat() {
-  const m={};
-  categories.forEach(c=>m[c.name]=0);
-  monthExp().forEach(e=>{ m[e.cat]=(m[e.cat]||0)+e.amount; });
-  return m;
+// ── FIREBASE SAVE/LOAD ────────────────────────────────────────────────────────
+function setStatus(s,text){
+  const el=document.getElementById("saveStatus");
+  el.className="save-status "+s; el.textContent=text;
 }
-function totalSpent() { return Object.values(spentByCat()).reduce((a,b)=>a+b,0); }
-function totalBudget() { return Object.values(budgets).reduce((a,b)=>a+b,0); }
-function totalSaved() { return savings.reduce((a,s)=>a+s.saved,0); }
-function totalTarget() { return savings.reduce((a,s)=>a+s.target,0); }
+async function saveToFirebase(){
+  if(!window._fbSave){setStatus("error","● Offline");return;}
+  setStatus("saving","● Menyimpan...");
+  await window._fbSave({categories,budgets,expenses,savings,currency:currency.code});
+  setStatus("saved","● Tersimpan ✓");
+  setTimeout(()=>setStatus("","●"),3000);
+}
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveToFirebase,1200);
+}
+async function loadFromFirebase(){
+  if(!window._fbLoad) return;
+  const d=await window._fbLoad();
+  if(d){
+    if(d.categories) categories=d.categories;
+    if(d.budgets) budgets=d.budgets;
+    if(d.expenses) expenses=d.expenses;
+    if(d.savings) savings=d.savings;
+    if(d.currency){ const c=CURRENCIES.find(x=>x.code===d.currency); if(c){currency=c;document.getElementById("curSel").value=c.code;}}
+  }
+  document.getElementById("loadingOverlay").style.display="none";
+  render();
+}
+
+// ── COMPUTED ──────────────────────────────────────────────────────────────────
+function monthExp(){return expenses.filter(e=>e.month===curMonth);}
+function spentByCat(){const m={};categories.forEach(c=>m[c.name]=0);monthExp().forEach(e=>{m[e.cat]=(m[e.cat]||0)+e.amount;});return m;}
+function totalSpent(){return Object.values(spentByCat()).reduce((a,b)=>a+b,0);}
+function totalBudget(){return Object.values(budgets).reduce((a,b)=>a+b,0);}
+function totalSaved(){return savings.reduce((a,s)=>a+s.saved,0);}
+function totalTarget(){return savings.reduce((a,s)=>a+s.target,0);}
 
 // ── INIT SELECTS ──────────────────────────────────────────────────────────────
-function initSelects() {
-  document.getElementById("yr").textContent = NOW.getFullYear();
-  const cs = document.getElementById("curSel");
-  CURRENCIES.forEach(c=>{ const o=document.createElement("option"); o.value=c.code; o.textContent=c.code+" "+c.symbol; cs.appendChild(o); });
+function initSelects(){
+  document.getElementById("yr").textContent=NOW.getFullYear();
+  const cs=document.getElementById("curSel");
+  CURRENCIES.forEach(c=>{const o=document.createElement("option");o.value=c.code;o.textContent=c.code+" "+c.symbol;cs.appendChild(o);});
   cs.value="IDR";
-  cs.onchange=()=>{ currency=CURRENCIES.find(c=>c.code===cs.value); render(); };
+  cs.onchange=()=>{currency=CURRENCIES.find(c=>c.code===cs.value);render();scheduleSave();};
   const ms=document.getElementById("monSel");
-  MONTHS.forEach((m,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=m; ms.appendChild(o); });
+  MONTHS.forEach((m,i)=>{const o=document.createElement("option");o.value=i;o.textContent=m;ms.appendChild(o);});
   ms.value=curMonth;
-  ms.onchange=()=>{ curMonth=+ms.value; render(); };
+  ms.onchange=()=>{curMonth=+ms.value;render();};
 }
 
-function buildIconGrid(gridId, current, setter) {
-  const g=document.getElementById(gridId); g.innerHTML="";
-  ICONS.forEach(ic=>{
-    const b=document.createElement("button"); b.className="icon-opt"+(current===ic?" selected":"");
-    b.textContent=ic; b.onclick=()=>{ setter(ic); buildIconGrid(gridId,ic,setter); };
-    g.appendChild(b);
-  });
+function buildIconGrid(gid,cur,setter){
+  const g=document.getElementById(gid);g.innerHTML="";
+  ICONS.forEach(ic=>{const b=document.createElement("button");b.className="icon-opt"+(cur===ic?" selected":"");b.textContent=ic;b.onclick=()=>{setter(ic);buildIconGrid(gid,ic,setter);};g.appendChild(b);});
 }
-function buildColorGrid(gridId, current, setter) {
-  const g=document.getElementById(gridId); g.innerHTML="";
-  COLORS.forEach(col=>{
-    const b=document.createElement("button"); b.className="color-opt"+(current===col?" selected":"");
-    b.style.background=col; b.onclick=()=>{ setter(col); buildColorGrid(gridId,col,setter); };
-    g.appendChild(b);
-  });
+function buildColorGrid(gid,cur,setter){
+  const g=document.getElementById(gid);g.innerHTML="";
+  COLORS.forEach(col=>{const b=document.createElement("button");b.className="color-opt"+(cur===col?" selected":"");b.style.background=col;b.onclick=()=>{setter(col);buildColorGrid(gid,col,setter);};g.appendChild(b);});
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
-function switchTab(id) {
-  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",["overview","expenses","budgets","savings"][i]===id));
+function switchTab(id){
+  const ids=["overview","expenses","budgets","savings"];
+  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",ids[i]===id));
   document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+id));
-  if(id==="overview") renderCharts();
+  if(id==="overview")renderCharts();
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
-function render() {
-  renderCards();
-  renderProgBars();
-  renderExpList();
-  renderBudgetList();
-  renderSavings();
-  renderCharts();
-}
+function render(){renderCards();renderProgBars();renderExpList();renderBudgetList();renderSavings();renderCharts();}
 
-function renderCards() {
-  const sp=totalSpent(), tb=totalBudget(), ts=totalSaved(), tt=totalTarget();
-  const rem=tb-sp;
+function renderCards(){
+  const sp=totalSpent(),tb=totalBudget(),ts=totalSaved(),tt=totalTarget(),rem=tb-sp;
   document.getElementById("cSpent").textContent=fmt(sp);
   document.getElementById("cSpent").className="card-value"+(sp>tb?" red":"");
   document.getElementById("cSpentSub").textContent="dari "+fmt(tb);
@@ -337,182 +358,105 @@ function renderCards() {
   document.getElementById("cRate").textContent=(tb>0?Math.round((rem/tb)*100):0)+"%";
 }
 
-function renderProgBars() {
+function renderProgBars(){
   const sbc=spentByCat();
   document.getElementById("progBars").innerHTML=categories.map(c=>{
-    const sp=sbc[c.name]||0, bu=budgets[c.name]||0;
-    const pct=bu>0?Math.min(100,Math.round(sp/bu*100)):0;
-    const over=sp>bu&&bu>0;
-    return `<div class="prog-row">
-      <div class="prog-head">
-        <span class="prog-name">${c.icon} ${c.name}</span>
-        <span class="prog-amt${over?' red':''}">${fmt(sp)} / ${fmt(bu)}</span>
-      </div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${over?'#ef4444':c.color}"></div></div>
-    </div>`;
+    const sp=sbc[c.name]||0,bu=budgets[c.name]||0;
+    const pct=bu>0?Math.min(100,Math.round(sp/bu*100)):0,over=sp>bu&&bu>0;
+    return `<div class="prog-row"><div class="prog-head"><span class="prog-name">${c.icon} ${c.name}</span><span class="prog-amt${over?' red':''}">${fmt(sp)} / ${fmt(bu)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${over?'#ef4444':c.color}"></div></div></div>`;
   }).join("");
 }
 
-function renderExpList() {
-  const catSel=document.getElementById("expCat");
-  const prev=catSel.value;
+function renderExpList(){
+  const catSel=document.getElementById("expCat"),prev=catSel.value;
   catSel.innerHTML=categories.map(c=>`<option>${c.name}</option>`).join("");
-  if(prev&&categories.find(c=>c.name===prev)) catSel.value=prev;
+  if(prev&&categories.find(c=>c.name===prev))catSel.value=prev;
   const list=monthExp();
   document.getElementById("expList").innerHTML=list.length===0?`<div class="empty">Belum ada pengeluaran bulan ini</div>`:
-    list.map(e=>{
-      const c=categories.find(x=>x.name===e.cat)||{icon:"⭐",color:"#64748b"};
-      return `<div class="exp-item">
-        <div class="exp-icon" style="background:${c.color}22">${c.icon}</div>
-        <div class="exp-info"><div class="exp-label">${e.label}</div><div class="exp-cat">${e.cat}</div></div>
-        <span class="exp-amt">${fmt(e.amount)}</span>
-        <button class="del-btn" onclick="delExpense(${e.id})">✕</button>
-      </div>`;
+    list.map(e=>{const c=categories.find(x=>x.name===e.cat)||{icon:"⭐",color:"#64748b"};
+      return `<div class="exp-item"><div class="exp-icon" style="background:${c.color}22">${c.icon}</div><div class="exp-info"><div class="exp-label">${e.label}</div><div class="exp-cat">${e.cat}</div></div><span class="exp-amt">${fmt(e.amount)}</span><button class="del-btn" onclick="delExpense(${e.id})">✕</button></div>`;
     }).join("");
 }
 
-function renderBudgetList() {
+function renderBudgetList(){
   document.getElementById("budgetList").innerHTML=`<div class="box-title">Batas Anggaran Bulanan</div>`+
-    categories.map(c=>`<div class="bud-row">
-      <div class="bud-icon" style="background:${c.color}22">${c.icon}</div>
-      <span class="bud-name">${c.name}</span>
-      <input type="number" value="${budgets[c.name]||0}" onchange="budgets['${c.name}']=+this.value;render()" />
-      <button class="del-btn" onclick="delCategory('${c.name}')">✕</button>
-    </div>`).join("");
+    categories.map(c=>`<div class="bud-row"><div class="bud-icon" style="background:${c.color}22">${c.icon}</div><span class="bud-name">${c.name}</span><input type="number" value="${budgets[c.name]||0}" onchange="budgets['${c.name}']=+this.value;render();scheduleSave()" /><button class="del-btn" onclick="delCategory('${c.name}')">✕</button></div>`).join("");
 }
 
-function renderSavings() {
-  const ts=totalSaved(), tt=totalTarget();
-  const pct=tt>0?Math.min(100,Math.round(ts/tt*100)):0;
+function renderSavings(){
+  const ts=totalSaved(),tt=totalTarget(),pct=tt>0?Math.min(100,Math.round(ts/tt*100)):0;
   document.getElementById("totalSavLabel").textContent=fmt(ts)+" / "+fmt(tt);
   document.getElementById("totalSavFill").style.width=pct+"%";
   document.getElementById("totalSavPct").textContent=pct+"% dari semua target";
-
   document.getElementById("savList").innerHTML=savings.map(s=>{
-    const p=s.target>0?Math.min(100,Math.round(s.saved/s.target*100)):0;
-    const isEditing=editingSavId===s.id;
-    return `<div class="sav-card">
-      <div class="sav-head">
-        <div class="sav-left">
-          <div class="sav-icon" style="background:${s.color}22">${s.icon}</div>
-          <div><div class="sav-name">${s.name}</div>${s.note?`<div class="sav-note">${s.note}</div>`:""}</div>
-        </div>
-        <button class="del-btn" onclick="delSavings(${s.id})">✕</button>
-      </div>
-      <div class="sav-amounts"><span style="color:${s.color};font-weight:500">${fmt(s.saved)} ditabung</span><span>Target: ${fmt(s.target)}</span></div>
-      <div class="sav-bar"><div class="sav-fill" style="width:${p}%;background:${s.color}"></div></div>
-      <div class="sav-footer">
-        <span class="sav-pct">${p}% tercapai</span>
-        ${isEditing
-          ? `<div class="add-funds-row">
-              <input type="number" id="fundAmt_${s.id}" placeholder="Jumlah" />
-              <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="confirmFund(${s.id})">✓</button>
-              <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="editingSavId=null;renderSavings()">✕</button>
-            </div>`
-          : `<button class="link-btn" onclick="editingSavId=${s.id};renderSavings()">+ Tambah dana</button>`
-        }
-      </div>
-    </div>`;
+    const p=s.target>0?Math.min(100,Math.round(s.saved/s.target*100)):0,isEd=editingSavId===s.id;
+    return `<div class="sav-card"><div class="sav-head"><div class="sav-left"><div class="sav-icon" style="background:${s.color}22">${s.icon}</div><div><div class="sav-name">${s.name}</div>${s.note?`<div class="sav-note">${s.note}</div>`:""}</div></div><button class="del-btn" onclick="delSavings(${s.id})">✕</button></div>
+    <div class="sav-amounts"><span style="color:${s.color};font-weight:500">${fmt(s.saved)} ditabung</span><span>Target: ${fmt(s.target)}</span></div>
+    <div class="sav-bar"><div class="sav-fill" style="width:${p}%;background:${s.color}"></div></div>
+    <div class="sav-footer"><span class="sav-pct">${p}% tercapai</span>${isEd?`<div class="add-funds-row"><input type="number" id="fa_${s.id}" placeholder="Jumlah"/><button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="confirmFund(${s.id})">✓</button><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="editingSavId=null;renderSavings()">✕</button></div>`:`<button class="link-btn" onclick="editingSavId=${s.id};renderSavings()">+ Tambah dana</button>`}</div></div>`;
   }).join("");
 }
 
-function renderCharts() {
+function renderCharts(){
   const sbc=spentByCat();
-  const pieData=categories.map(c=>({label:c.name,value:sbc[c.name]||0,color:c.color})).filter(d=>d.value>0);
-
-  if(pieChartInst) pieChartInst.destroy();
-  const pc=document.getElementById("pieChart").getContext("2d");
-  pieChartInst=new Chart(pc,{
-    type:"doughnut",
-    data:{labels:pieData.map(d=>d.label),datasets:[{data:pieData.map(d=>d.value),backgroundColor:pieData.map(d=>d.color),borderWidth:2,borderColor:"#fff"}]},
-    options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11},boxWidth:10}},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}}}
-  });
-
-  if(barChartInst) barChartInst.destroy();
-  const bc=document.getElementById("barChart").getContext("2d");
-  barChartInst=new Chart(bc,{
-    type:"bar",
-    data:{
-      labels:categories.map(c=>c.name),
-      datasets:[
-        {label:"Anggaran",data:categories.map(c=>budgets[c.name]||0),backgroundColor:"#e0e7ff",borderRadius:4},
-        {label:"Pengeluaran",data:categories.map(c=>sbc[c.name]||0),backgroundColor:"#6366f1",borderRadius:4},
-      ]
-    },
-    options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11},boxWidth:10}},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}},
-      scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>shortFmt(v),font:{size:10}}}}}
-  });
+  const pd=categories.map(c=>({label:c.name,value:sbc[c.name]||0,color:c.color})).filter(d=>d.value>0);
+  if(pieChartInst)pieChartInst.destroy();
+  pieChartInst=new Chart(document.getElementById("pieChart").getContext("2d"),{type:"doughnut",data:{labels:pd.map(d=>d.label),datasets:[{data:pd.map(d=>d.value),backgroundColor:pd.map(d=>d.color),borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11},boxWidth:10}},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}}}});
+  if(barChartInst)barChartInst.destroy();
+  barChartInst=new Chart(document.getElementById("barChart").getContext("2d"),{type:"bar",data:{labels:categories.map(c=>c.name),datasets:[{label:"Anggaran",data:categories.map(c=>budgets[c.name]||0),backgroundColor:"#e0e7ff",borderRadius:4},{label:"Pengeluaran",data:categories.map(c=>sbc[c.name]||0),backgroundColor:"#6366f1",borderRadius:4}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11},boxWidth:10}},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>shortFmt(v),font:{size:10}}}}}});
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
-function addExpense() {
-  const cat=document.getElementById("expCat").value;
-  const label=document.getElementById("expLabel").value.trim();
-  const amount=+document.getElementById("expAmt").value;
-  if(!label||!amount) return;
+function addExpense(){
+  const cat=document.getElementById("expCat").value,label=document.getElementById("expLabel").value.trim(),amount=+document.getElementById("expAmt").value;
+  if(!label||!amount)return;
   expenses.push({id:nextId++,cat,label,amount,month:curMonth});
-  document.getElementById("expLabel").value="";
-  document.getElementById("expAmt").value="";
-  render();
+  document.getElementById("expLabel").value="";document.getElementById("expAmt").value="";
+  render();scheduleSave();
 }
-function delExpense(id) { expenses=expenses.filter(e=>e.id!==id); render(); }
+function delExpense(id){expenses=expenses.filter(e=>e.id!==id);render();scheduleSave();}
 
-function toggleCatForm() {
-  const f=document.getElementById("catForm");
-  f.classList.toggle("hidden");
-  if(!f.classList.contains("hidden")) {
-    buildIconGrid("iconGrid",newCatIcon,v=>{newCatIcon=v;});
-    buildColorGrid("colorGrid",newCatColor,v=>{newCatColor=v;});
-  }
+function toggleCatForm(){
+  const f=document.getElementById("catForm");f.classList.toggle("hidden");
+  if(!f.classList.contains("hidden")){buildIconGrid("iconGrid",newCatIcon,v=>newCatIcon=v);buildColorGrid("colorGrid",newCatColor,v=>newCatColor=v);}
 }
-function addCategory() {
-  const name=document.getElementById("catName").value.trim();
-  if(!name) return;
-  categories.push({name,icon:newCatIcon,color:newCatColor});
-  budgets[name]=0;
-  document.getElementById("catName").value="";
-  toggleCatForm();
-  render();
+function addCategory(){
+  const name=document.getElementById("catName").value.trim();if(!name)return;
+  categories.push({name,icon:newCatIcon,color:newCatColor});budgets[name]=0;
+  document.getElementById("catName").value="";toggleCatForm();render();scheduleSave();
 }
-function delCategory(name) {
-  categories=categories.filter(c=>c.name!==name);
-  delete budgets[name];
-  render();
-}
+function delCategory(name){categories=categories.filter(c=>c.name!==name);delete budgets[name];render();scheduleSave();}
 
-function toggleSavForm() {
-  const f=document.getElementById("savForm");
-  f.classList.toggle("hidden");
-  if(!f.classList.contains("hidden")) {
-    buildIconGrid("savIconGrid",newSavIcon,v=>{newSavIcon=v;});
-    buildColorGrid("savColorGrid",newSavColor,v=>{newSavColor=v;});
-  }
+function toggleSavForm(){
+  const f=document.getElementById("savForm");f.classList.toggle("hidden");
+  if(!f.classList.contains("hidden")){buildIconGrid("savIconGrid",newSavIcon,v=>newSavIcon=v);buildColorGrid("savColorGrid",newSavColor,v=>newSavColor=v);}
 }
-function addSavings() {
-  const name=document.getElementById("savName").value.trim();
-  const target=+document.getElementById("savTarget").value;
-  if(!name||!target) return;
+function addSavings(){
+  const name=document.getElementById("savName").value.trim(),target=+document.getElementById("savTarget").value;
+  if(!name||!target)return;
   savings.push({id:nextId++,name,icon:newSavIcon,color:newSavColor,target,saved:+document.getElementById("savSaved").value||0,note:document.getElementById("savNote").value.trim()});
-  document.getElementById("savName").value="";
-  document.getElementById("savNote").value="";
-  document.getElementById("savTarget").value="";
-  document.getElementById("savSaved").value="";
-  toggleSavForm();
-  renderSavings();
+  ["savName","savNote","savTarget","savSaved"].forEach(id=>document.getElementById(id).value="");
+  toggleSavForm();renderSavings();renderCards();scheduleSave();
 }
-function delSavings(id) { savings=savings.filter(s=>s.id!==id); renderSavings(); renderCards(); }
-function confirmFund(id) {
-  const amt=+document.getElementById("fundAmt_"+id).value;
-  if(isNaN(amt)) return;
+function delSavings(id){savings=savings.filter(s=>s.id!==id);renderSavings();renderCards();scheduleSave();}
+function confirmFund(id){
+  const amt=+document.getElementById("fa_"+id).value;if(isNaN(amt))return;
   savings=savings.map(s=>s.id===id?{...s,saved:Math.max(0,s.saved+amt)}:s);
-  editingSavId=null;
-  renderSavings();
-  renderCards();
+  editingSavId=null;renderSavings();renderCards();scheduleSave();
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 initSelects();
-render();
+if(window._fbReady){
+  loadFromFirebase();
+} else {
+  window.addEventListener("fb-ready",loadFromFirebase);
+  // Fallback: hide loader after 5s if Firebase fails to init (e.g. config not set)
+  setTimeout(()=>{
+    document.getElementById("loadingOverlay").style.display="none";
+    render();
+  },5000);
+}
 </script>
 </body>
 </html>
